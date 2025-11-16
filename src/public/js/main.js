@@ -10,9 +10,8 @@ const paddleSpeed = 6;
 const ballSpeed = 5;
 const bevelWidth = 4;
 
-const gameCanvas = document.getElementById("gameCanvas");
-const ctx = gameCanvas.getContext("2d");
-
+var gameCanvas;
+var ctx;
 var intervalId;
 var paddle;
 var ball;
@@ -24,9 +23,15 @@ var arrowRightPressed = false;
 var currentPoints = 0;
 var maxPoints;
 
-drawTitleScreen();
+// funkcija za inicijaliziranje igre, poziva se iz onload
+function initializeGame() {
+    gameCanvas = document.getElementById("gameCanvas");
+    ctx = gameCanvas.getContext("2d");
+    drawTitleScreen(); // poziva se funkcija koja prikazuje naslovni ekran
+}
 
-window.addEventListener("keydown", e => {
+// dodaju se event listeneri za kontrolu igre (space i strelice lijevo i desno)
+window.addEventListener("keydown", e => { 
     if (e.code == "Space") {
         spacePressed();
     }
@@ -46,6 +51,7 @@ window.addEventListener("keyup", e => {
     }
 });
 
+// funkcija za iscrtavanje naslovnog ekrana
 function drawTitleScreen() {
     clearScreen();
 
@@ -60,10 +66,12 @@ function drawTitleScreen() {
     ctx.fillText("Press SPACE to begin", canvasWidth / 2, canvasHeight / 2 + 36 / 2 + 10);
 }
 
+// pomoćna funkcija
 function clearScreen() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 }
 
+// poziva se kada je space pritisnut, započinje igru ako smo na naslovnom ekranu
 function spacePressed() {
     if (onTitleScreen) {
         onTitleScreen = false;
@@ -71,7 +79,9 @@ function spacePressed() {
     }
 }
 
+// funkcija koja inicijalizira svo stanje igre i stavlja objekte igre ga u listu objects
 function startGame() {
+    // pokušavamo dobiti maxPoints iz localStorage
     maxPoints = localStorage.getItem('maxPoints');
     if(maxPoints === null) {
         maxPoints = '0';
@@ -79,12 +89,14 @@ function startGame() {
     }
     maxPoints = Number(maxPoints);
 
+    // svaki zid je jedan objekt, zbog ovoga ne moramo implementirati dodatnu funkcionalnost provjere rubova terena
+    // loptica se sudara sa svim objektima (osim sa samom sobom)
     let leftWall = {
-        position: {
+        position: { // svaki objekt ima poziciju
             x: -5,
             y: canvasHeight / 2
         },
-        size: {
+        size: { // svaki objekt ima veličinu
             x: 10,
             y: canvasHeight
         }
@@ -124,10 +136,12 @@ function startGame() {
             x: canvasWidth,
             y: 10
         },
-        onhit: gameOver
+        onhit: gameOver // kada lopta pogodi objekt, ako objekt ima atribut onhit, bit će pozvana ta funkcija
+        // pogađanje donjeg "zida" izaziva kraj igre
     }
     objects.push(bottomWall);
 
+    // objekt palice
     paddle = {
         position: {
             x: canvasWidth / 2,
@@ -137,7 +151,7 @@ function startGame() {
             x: 50,
             y: 10
         },
-        color: "#FFFFFF"
+        color: "#FFFFFF" // objekti koji imaju atribut color biti će iscrtavani u funkciji drawObjects 
     }
     objects.push(paddle);
 
@@ -152,13 +166,16 @@ function startGame() {
             y: 10
         },
         color: "#FFFFFF",
-        velocity: {
+        velocity: { // loptica ima dodatni atribut velocity (vektor brzine)
+            // inicijalno je nasumično gore-lijevo ili gore-desno
+            // računamo iz brzine uz pomoć konstante Math.SQRT1_2 koja je jednaka 1 / Math.sqrt(2)
             x: (ballSpeed * Math.SQRT1_2) * (Math.random() < 0.5 ? -1 : 1),
             y: -(ballSpeed * Math.SQRT1_2)
         }
     };
     objects.push(ball);
 
+    // generiramo cigle
     let rowColors = ["rgb(153, 51, 0)", "rgb(255, 0, 0)", "rgb(255, 153, 204)", "rgb(0, 255, 0)", "rgb(255, 255, 153)"]
     let cursorX = brickSpacingHorizontal / 2 + brickWidth / 2;
     let cursorY = 50 + brickSpacingVertical;
@@ -175,14 +192,14 @@ function startGame() {
                     y: brickHeight
                 },
                 color: color,
-                onhit: function () {
+                onhit: function () { // kada je cigla pogođena, označava se za uništavanje i povećava broj bodova
                     this.destroyed = true;
                     currentPoints++;
-                    if (currentPoints >= brickRowCount * brickColumnCount) {
+                    if (currentPoints >= brickRowCount * brickColumnCount) { // ako su sve cigle uništene, igra je gotova
                         gameWon();
                     }
                 },
-                destroyed: false
+                destroyed: false // objekti koji imaju atribut destroyed = true uklanjaju se iz liste objekata 
             };
             objects.push(brick);
             cursorX += brickWidth + brickSpacingHorizontal;
@@ -190,13 +207,14 @@ function startGame() {
         cursorX = brickSpacingHorizontal / 2 + brickWidth / 2;
         cursorY += brickHeight + brickSpacingVertical;
     }
-    intervalId = setInterval(update, 20);
+
+    intervalId = setInterval(update, 20); // započinjemo update loop
 }
 
-function update() {
+function update() { // prvo mičemo palicu, pa simuliramo loptu, pa iscrtavamo novo stanje igre na ekran
     movePaddle();
     moveBall();
-    objects = objects.filter(o => !o.destroyed);
+    objects = objects.filter(o => !o.destroyed); // objekti koji imaju atribut destroyed = true uklanjaju se iz liste objekata
     if (!gameEnded) {
         drawGame();    
     }
@@ -210,11 +228,12 @@ function movePaddle() {
     if (arrowRightPressed) {
         moveInput += 1;
     }
-    paddle.position.x += moveInput * paddleSpeed;
+    paddle.position.x += moveInput * paddleSpeed; // ovisno o pritiskanju strelica mičemo palicu lijevo ili desno
     paddle.position.x = clamp(paddle.position.x, paddle.size.x / 2, canvasWidth - paddle.size.x / 2);
     paddle.paddle
 }
 
+// pomoćna funkcija za ograničavanje vrijednosti, da palica ne pobjegne iz ekrana
 function clamp(value, min, max) {
     return Math.max(min, Math.min(value, max));
 }
@@ -224,11 +243,15 @@ function moveBall() {
     ball.position.y += ball.velocity.y;
 
     for (let o of objects) {
-        if (o === ball) continue;
+        if (o === ball) continue; // ne sudara se sama sa sobom
+        // ovdje računamo koliko se loptica preklapa sa objektom u obje dimenzije
         let xOverlap = (ball.size.x + o.size.x) / 2 - Math.abs(ball.position.x - o.position.x);
         let yOverlap = (ball.size.y + o.size.y) / 2 - Math.abs(ball.position.y - o.position.y);
 
-        if (xOverlap > 0 && yOverlap > 0) {
+        if (xOverlap > 0 && yOverlap > 0) { // ako se preklapa u obje dimenzije, dogodio se sudar
+            // vjerojatno smo se sudarili u stranu gdje je preklapanje manje, pa tu komponentu brzine obrćemo,
+            // osim ako su preklapanja vrlo slična, što znači da smo "pogodili kut",
+            // pa obrćemo cijeli velocity vektor i množimo ga se 1.05
             if (Math.abs(xOverlap - yOverlap) < 2) {
                 ball.velocity.x *= -1.05;
                 ball.velocity.y *= -1.05;
@@ -247,12 +270,12 @@ function moveBall() {
 }
 
 function drawGame() {
-    clearScreen();
-    drawScore();
-    drawObjects();
+    clearScreen(); // čistimo ekran
+    drawScore(); // ispisujemo rezultat
+    drawObjects(); // isctavamo sve objekte
 }
 
-function drawScore() {
+function drawScore() { // ispisivanje rezultata prema detaljim uputama
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "18px Helvetica";
     ctx.textAlign = "left";
@@ -265,11 +288,12 @@ function drawScore() {
 
 function drawObjects() {
     for (let o of objects) {
-        if (o.color === undefined) continue;
+        if (o.color === undefined) continue; // iscrtavamo sve objekte koji imaju atribut color
         drawBrick(o.position.x - o.size.x / 2, o.position.y - o.size.y / 2, o.size.x, o.size.y, o.color);
     }
 }
 
+// pomoćna funkcija koja iscrtava pravokutnik sa 3D efektom
 function drawBrick(x, y, width, height, color) {
     ctx.fillStyle = color;
     ctx.fillRect(x, y, width, height); 
@@ -284,9 +308,9 @@ function drawBrick(x, y, width, height, color) {
 }
 
 function gameOver() {
-    endGame();
+    endGame(); // poziv funkcije za završetak igre
     clearScreen();
-    
+    // ispisivanje poruke "GAME OVER"
     ctx.fillStyle = "rgb(255, 255, 0)";
     ctx.font = "bold 40px Helvetica";
     ctx.textAlign = "center";
@@ -295,9 +319,9 @@ function gameOver() {
 }
 
 function gameWon() {
-    endGame();
+    endGame();// poziv funkcije za završetak igre
     clearScreen();
-    
+    // ispisivanje poruke "YOU WON!"
     ctx.fillStyle = "rgb(255, 255, 0)";
     ctx.font = "bold 40px Helvetica";
     ctx.textAlign = "center";
@@ -305,10 +329,11 @@ function gameWon() {
     ctx.fillText("YOU WIN!", canvasWidth / 2, canvasHeight / 2);
 }
 
+// pomoćna funkcija koja se poziva kada pobijedimo ili izgubimo
 function endGame() {
     gameEnded = true;
-    clearInterval(intervalId);
-    if (currentPoints > maxPoints) {
-        localStorage.setItem('maxPoints', currentPoints);
+    clearInterval(intervalId); // zaustavlja se update loop
+    if (currentPoints > maxPoints) { // sprema se novi maxPoints
+        localStorage.setItem('maxPoints', currentPoints); 
     }
 }
