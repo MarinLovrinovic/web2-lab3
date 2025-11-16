@@ -1,0 +1,29 @@
+{
+  "name": "web2-lab3",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/app.js",
+  "scripts": {
+    "build": "npm run clean && tsc && npm run copy-files",
+    "clean": "rm -rf dist",
+    "copy-files": "cp -r src/public/ dist",
+    "reverse-copy": "cp -r dist/public/ src",
+    "start": "node dist/app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^5.1.0",
+    "fs": "0.0.1-security",
+    "https": "^1.0.0",
+    "pug": "^3.0.2",
+    "pg": "^8.13.0",
+    "cookie-parser": "1.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.8.1",
+    "@types/pg": "^8.11.10",
+    "shx": "^0.3.4"
+  }
+}
